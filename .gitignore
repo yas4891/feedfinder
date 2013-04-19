@@ -11,5 +11,5 @@ out
 pids
 logs
 results
-
+xa*
 npm-debug.log
