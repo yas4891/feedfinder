@@ -6,8 +6,14 @@ var modurl = require('url');
 //var counter = 0;
 
 var qRdFile = async.queue(function(task, callback) {
+    var called = false;
 	fs.readFile(task.filename,'utf8', function(error, data) {
-	    if(error) throw error;
+	    if(error)
+	    {
+		console.log(error);
+		return;
+	    }
+	    
 	    var line = data.split(/\r?\n/)[0];
 	    var url = line.split(" ")[1];
 	    
@@ -25,7 +31,7 @@ var qRdFile = async.queue(function(task, callback) {
 	    });
 	    /* */
 	});
-    setImmediate(function() {callback(null);});
+	setImmediate(function() {callback(null);});
 }, 50);
 
 
