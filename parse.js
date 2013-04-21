@@ -2,8 +2,6 @@ var fs = require('fs');
 var cheerio = require('cheerio');
 var async = require('async');
 var modurl = require('url');
-//var jsdom = require("jsdom");
-//var counter = 0;
 
 var qRdFile = async.queue(function(task, callback) {
     var called = false;
@@ -17,18 +15,25 @@ var qRdFile = async.queue(function(task, callback) {
 	    var line = data.split(/\r?\n/)[0];
 	    var url = line.split(" ")[1];
 	    
-	    setImmediate( function() { 
-	    $ = cheerio.load(data);
+		try {
+	    //setImmediate(function() { 
+		$ = cheerio.load(data);
 	    
-	    
-	    var links = $('link[type*="application/rss"][rel*="alternate"]');
-	    links.each(function(index, elt) {
-		var relurl = $(this).attr('href');
-		var absurl = modurl.resolve(url, relurl);
-		fs.appendFile("feeds.txt", url + " >> " + absurl + "\n");
-		console.log('Found:' +relurl + '<< result: ' + absurl + ' on ' + url);
-	    });
-	    });
+		var links = $('link[type*="application/rss"][rel*="alternate"]');
+		
+		links.each(function(index, elt) {
+		    var relurl = $(this).attr('href');
+		    var absurl = modurl.resolve(url, relurl);
+		    fs.appendFile("feeds.txt", url + " >> " + absurl + "\n");
+		});
+
+		}
+		catch(exception) {
+		     
+		    console.log("error with screenname:" + task.filename);
+		    console.log("exception:" + exception);
+		}
+	    //});
 	    /* */
 	});
 	setImmediate(function() {callback(null);});
