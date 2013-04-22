@@ -7,7 +7,7 @@ var memwatch = require("memwatch");
 function parseData(data, screenname) {
     var line = data.split(/\r?\n/)[0];
     var url = line.split(" ")[1];
-	    
+    var hd = new memwatch.HeapDiff();	    
     try {
 	$ = cheerio.load(data);
 	    
@@ -18,6 +18,7 @@ function parseData(data, screenname) {
 	    var absurl = modurl.resolve(url, relurl);
 	    fs.appendFile("feeds.txt", url + " >> " + absurl + "\n");
 	});
+	$ = null;
     }
     catch(exception) {
 	console.log("error with screenname:" + screenname);
@@ -26,6 +27,13 @@ function parseData(data, screenname) {
     data = null; 
     line = null;
     url	 = null;
+
+    memwatch.gc();
+    var diff = hd.end();
+
+    console.log('@@@@@@@@@@@@@@@@@@@@');
+    console.log(diff);
+    console.log('@@@@@@@@@@@@@@@@@@@@');
 }
 
 var qRdFile = async.queue(function(task, callback) {
@@ -53,12 +61,12 @@ fs.readdir(dir, function(errRdDir, files) {
 	}); // push queue
     }); // files.forEach
 }); // read directory
-
+/*
 memwatch.on('stats', function(info) {
     console.log(info);
 
 });
-
+/* */
 
 function fileCallback(errFile) 
 {
