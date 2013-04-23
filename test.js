@@ -1,4 +1,8 @@
 var request = require('request');
+var feedextract = require("./lib/feedextract");
 
-console.log(process.argv[2]);
+feedextract.requestAndExtract({url:"http://www.it-engelhardt.de"}, function(error, result) {
+    console.log(result.feeds);    
+});
+
 //request.setMaxListeners(0);

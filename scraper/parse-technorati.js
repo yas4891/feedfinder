@@ -4,41 +4,49 @@ var modurl = require('url');
 var memwatch = require("memwatch");
 var heapdump = require("heapdump");
 var profiler = require("profiler");
-var jsdom = require("jsdom");
-var counter = 0;
-var jquery = fs.readFileSync("../lib/jquery.js").toString();
+
+var parser = require("../lib/parser");
+var feedextract = require("../lib/feedextract");
+
+
+var qExternalPage = async.queue(function(task, callback) {
+    console.log("starting on:", task.url);
+    /*
+    feedextract.requestAndExtract({url: task.url}, function(errFE, result) {
+	
+	if(errFE) {
+	    console.log("qEP error retrieving URL:", task.url, " -> ", errFE);
+	    callback(errFE);
+	}
+	else {
+	    console.log("retrieving page:", task.url);
+	    result.feeds.each(function(feed_link) {
+		fs.appendFile("../techno_feeds.txt", 
+		    task.position + " |||SEPERATOR||| " + task.url + " |||SEPERATOR||| " + feed_link);	
+	    });
+	    callback(null);
+	}
+    });
+    /* */
+}, 100);
 
 function parseData(task) {
-    var ofstPosition = (task.page - 1) * 25 + 1;
-    try {
-	jsdom.env(
-	{
-	    html: task.body,
-	    src: [jquery],
-	    done: function(errors, window) {
-		var $ = window.$;
-
-		$('td.site-details a.offsite').each(function() {
-		    console.log(ofstPosition++, " -> ", $(this).attr('href'));
-		});
-	    }
+    var ofstPosition = (task.page - 1) * 25 + 1;   
+    parser.parse(task.body, function($) {
+	$('td.site-details a.offsite').each(function() {
+	    //console.log(ofstPosition++, ' -> ', $(this).attr('href'));
+	    console.log("pushing for number:", $(this).attr('href'));
+	    qExternalPage.push({
+		position: ofstPosition++,
+		url: $(this).attr('href')
+	    }, function(error) { if(error) console.log("qEP callback:" + error);});
 	});
-    }
-    catch(exception) {
-	console.log("error with :" + task.page);
-	console.log("exception:" + exception);
-    }
-    if(1000 == counter++) {
-	console.log("###################");
-	console.log("storing heapdump");
-	heapdump.writeSnapshot();
-    }
+    });
 }
 
+
 var qRdFile = async.queue(function(task, callback) {
- //   var hd = new memwatch.HeapDiff();	    
     fs.readFile(task.filename,'utf8', function(error, data) {
-//	profiler.resume();
         if(error)
         {
 	    console.log(error);
@@ -46,40 +54,21 @@ var qRdFile = async.queue(function(task, callback) {
 	}
 	
         parseData(JSON.parse(data)); 
-//	profiler.pause();
-        setImmediate(function() {callback(null);});
+	callback();
     });
     
-    /* 
-    var diff = hd.end();
-
-    console.log('@@@@@@@@@@@@@@@@@@@@');
-    console.log(diff.before);
-    console.log(diff.after);
-    console.log("### change");
-    console.log(diff.change);
-    console.log('@@@@@@@@@@@@@@@@@@@@');
     /* */
 }, 50);
 
 
 var dir = 'data/';
-
-qRdFile.push({filename: dir + '999.json'}, function(errFile) {
-    if(errFile) throw errFile; 
-});
-/*
-fs.readdir(dir, function(errRdDir, files) {
-    if(errRdDir) throw errRdDir;
-    console.log('number of files:' + files.length);
-    files.forEach(function(file) {
-	qRdFile.push({filename: dir + file}, function(errFile) {
-	    if(errFile) throw errFile;
-	    //console.log("called back");
-	}); // push queue
-    }); // files.forEach
-}); // read directory
-
+for(var i = 1; i <= 4000; i++) {
+    var path = dir + i + '.json';
+    if(!fs.existsSync(path)) continue;
+    qRdFile.push({filename: path}, function(errFile) {
+	if(errFile) throw errFile; 
+    });
+}
 /* */
 
 function fileCallback(errFile) 
