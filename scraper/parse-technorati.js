@@ -11,7 +11,7 @@ var feedextract = require("../lib/feedextract");
 
 var qExternalPage = async.queue(function(task, callback) {
     console.log("starting on:", task.url);
-    /*
+    
     feedextract.requestAndExtract({url: task.url}, function(errFE, result) {
 	
 	if(errFE) {
@@ -20,9 +20,9 @@ var qExternalPage = async.queue(function(task, callback) {
 	}
 	else {
 	    console.log("retrieving page:", task.url);
-	    result.feeds.each(function(feed_link) {
+	    result.feeds.forEach(function(feed_data) {
 		fs.appendFile("../techno_feeds.txt", 
-		    task.position + " |||SEPERATOR||| " + task.url + " |||SEPERATOR||| " + feed_link);	
+		    task.position + " |||SEPERATOR||| " + task.url + " |||SEPERATOR||| " + feed_data.feed_url + "\n");	
 	    });
 	    callback(null);
 	}
@@ -35,13 +35,15 @@ function parseData(task) {
     parser.parse(task.body, function($) {
 	$('td.site-details a.offsite').each(function() {
 	    //console.log(ofstPosition++, ' -> ', $(this).attr('href'));
-	    console.log("pushing for number:", $(this).attr('href'));
-	    qExternalPage.push({
+	    var nobj = {
 		position: ofstPosition++,
 		url: $(this).attr('href')
-	    }, function(error) { if(error) console.log("qEP callback:" + error);});
-	});
-    });
+	    };
+	    qExternalPage.push(nobj);
+	    process.stdout.write(".");
+	    //console.log("pushing for number:", $(this).attr('href'));
+	}); // each site link
+    }); // parser.parse
 }
 
 
@@ -52,14 +54,15 @@ var qRdFile = async.queue(function(task, callback) {
 	    console.log(error);
 	    return;
 	}
-	
+	setImmediate(function(){
         parseData(JSON.parse(data)); 
-	callback();
+	callback();});
     });
     
     /* */
-}, 50);
+}, 5);
 
+//qExternalPage.push({url: 'http://www.it-engelhardt.de', position: 1});
 
 var dir = 'data/';
 for(var i = 1; i <= 4000; i++) {
@@ -70,11 +73,3 @@ for(var i = 1; i <= 4000; i++) {
     });
 }
 /* */
-
-function fileCallback(errFile) 
-{
-  if(errFile) 
-  {
-    console.log("Error while writing to file: " +errFile);
-  }
-}
