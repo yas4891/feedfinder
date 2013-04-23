@@ -14,5 +14,6 @@ out
 pids
 logs
 results
+scraper/data
 xa*
 npm-debug.log

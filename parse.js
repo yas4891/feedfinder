@@ -1,52 +1,68 @@
 var fs = require('fs');
-var cheerio = require('cheerio');
 var async = require('async');
 var modurl = require('url');
 var memwatch = require("memwatch");
+var heapdump = require("heapdump");
+var profiler = require("profiler");
+var jsdom = require("jsdom");
+var counter = 0;
+var jquery = fs.readFileSync("./lib/jquery.js").toString();
 
 function parseData(data, screenname) {
     var line = data.split(/\r?\n/)[0];
     var url = line.split(" ")[1];
-    var hd = new memwatch.HeapDiff();	    
     try {
-	$ = cheerio.load(data);
-	    
-	var links = $('link[type*="application/rss"][rel*="alternate"]');
-		
-	links.each(function(index, elt) {
-	    var relurl = $(this).attr('href');
-	    var absurl = modurl.resolve(url, relurl);
-	    fs.appendFile("feeds.txt", url + " >> " + absurl + "\n");
+	jsdom.env(
+	{
+	    html: data,
+	    src: [jquery],
+	    done: function(errors, window) {
+		var $ = window.$;
+
+		$('link[type*="application/rss"][rel*="alternate"]').each(function() {
+		   // console.log(" -", $(this).attr('href'));
+		});
+	    }
 	});
-	$ = null;
     }
     catch(exception) {
 	console.log("error with screenname:" + screenname);
 	console.log("exception:" + exception);
     }
+    if(1000 == counter++) {
+	console.log("###################");
+	console.log("storing heapdump");
+	heapdump.writeSnapshot();
+    }
     data = null; 
     line = null;
     url	 = null;
-
-    memwatch.gc();
-    var diff = hd.end();
-
-    console.log('@@@@@@@@@@@@@@@@@@@@');
-    console.log(diff);
-    console.log('@@@@@@@@@@@@@@@@@@@@');
 }
 
 var qRdFile = async.queue(function(task, callback) {
-    var called = false;
-	fs.readFile(task.filename,'utf8', function(error, data) {
-	    if(error)
-	    {
-		console.log(error);
-		return;
-	    }
-	    parseData(data, task.filename); 
-	});
-	setImmediate(function() {callback(null);});
+ //   var hd = new memwatch.HeapDiff();	    
+    fs.readFile(task.filename,'utf8', function(error, data) {
+//	profiler.resume();
+        if(error)
+        {
+	    console.log(error);
+	    return;
+	}
+        parseData(data, task.filename); 
+//	profiler.pause();
+        setImmediate(function() {callback(null);});
+    });
+    
+    /* 
+    var diff = hd.end();
+
+    console.log('@@@@@@@@@@@@@@@@@@@@');
+    console.log(diff.before);
+    console.log(diff.after);
+    console.log("### change");
+    console.log(diff.change);
+    console.log('@@@@@@@@@@@@@@@@@@@@');
+    /* */
 }, 50);
 
 
@@ -61,12 +77,6 @@ fs.readdir(dir, function(errRdDir, files) {
 	}); // push queue
     }); // files.forEach
 }); // read directory
-/*
-memwatch.on('stats', function(info) {
-    console.log(info);
-
-});
-/* */
 
 function fileCallback(errFile) 
 {
