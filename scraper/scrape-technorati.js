@@ -13,7 +13,7 @@ function setupParse() {
 
 var qAggregator = async.queue(function(task, callback) {
     var url = task.url;
-    request({uri: url, maxRedirects:10, timeout:50000, 
+    request({uri: url, maxRedirects:10, timeout:100000, 
 	headers:{"user-agent": 'FeedFinder http://github.com/yas4891/feedfinder' }
 	}, function (error, response, body)    
     {
@@ -32,7 +32,7 @@ var qAggregator = async.queue(function(task, callback) {
     }).setMaxListeners(25); // request 
 	/* */
 // maximum 3 concurrent requests
-}, 3);
+}, 9);
 
 setupParse();
 
@@ -40,6 +40,8 @@ setupParse();
 
 for(var i = 1;i <= 5000; i++)
 {
+    if(fs.existsSync('data/' + i + '.json'))
+	continue;
     qAggregator.push({page: i, url:"http://technorati.com/blogs/top100/page-" + i + "/"}, function() {});
 }
 console.log("pushed all 4000 pages into queue");
