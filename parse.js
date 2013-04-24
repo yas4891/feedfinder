@@ -2,20 +2,39 @@ var fs = require('fs');
 var async = require('async');
 var modurl = require('url');
 var parser = require('./lib/parser');
+var jsdom = require('jsdom');
+
 var counter = 0;
 
 function parseData(data, screenname) {
     var line = data.split(/\r?\n/)[0];
     var url = line.split(" ")[1];
+    
+    jsdom.env({
+	html: data,
+	scripts: ["jquery.js"],
+	done: function(error, window) {
+	    if(error) {
+		console.log("error creating DOM:", error);
+	    }
+	    try
+	    {
+		var $ = window.$;
+		$('link[type*="application/rss"][rel*="alternate"]').each(function() {
+		    //console.log(" -", $(this).attr('href'));
+		    var relurl = $(this).attr('href');
+		    var absurl = modurl.resolve(url, relurl);
 
-    parser.parse(data, function($) {
-	$('link[type*="application/rss"][rel*="alternate"]').each(function() {
-	    //console.log(" -", $(this).attr('href'));
-	    var relurl = $(this).attr('href');
-	    var absurl = modurl.resolve(url, relurl);
+		    fs.appendFile('twitter_feeds.txt', url + " ||SEPERATOR|| " + absurl + "\n");
+		});
+	    }
+	    catch(exception) 
+	    {
+		console.log('caught exception while parsing:', exception);
+	    }
 
-	    fs.appendFile('twitter_feeds.txt', url + " ||SEPERATOR|| " + absurl + "\n");
-	});
+	    window.close();
+	}
     });
 }
 

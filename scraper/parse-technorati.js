@@ -34,14 +34,12 @@ function parseData(task) {
     var ofstPosition = (task.page - 1) * 25 + 1;   
     parser.parse(task.body, function($) {
 	$('td.site-details a.offsite').each(function() {
-	    //console.log(ofstPosition++, ' -> ', $(this).attr('href'));
 	    var nobj = {
 		position: ofstPosition++,
 		url: $(this).attr('href')
 	    };
 	    qExternalPage.push(nobj);
 	    process.stdout.write(".");
-	    //console.log("pushing for number:", $(this).attr('href'));
 	}); // each site link
     }); // parser.parse
 }
@@ -54,6 +52,7 @@ var qRdFile = async.queue(function(task, callback) {
 	    console.log(error);
 	    return;
 	}
+	// call async to enable concurrency between both queues
 	setImmediate(function(){
         parseData(JSON.parse(data)); 
 	callback();});
