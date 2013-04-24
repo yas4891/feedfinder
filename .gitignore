@@ -9,7 +9,8 @@ lib-cov
 node_modules
 bu
 content
-feeds.txt
+tmp
+*feeds.txt
 out
 pids
 logs

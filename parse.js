@@ -10,10 +10,12 @@ function parseData(data, screenname) {
     var line = data.split(/\r?\n/)[0];
     var url = line.split(" ")[1];
     
+    console.log('parsing screenname:', screenname);    
     jsdom.env({
 	html: data,
 	scripts: ["jquery.js"],
 	done: function(error, window) {
+
 	    if(error) {
 		console.log("error creating DOM:", error);
 	    }
@@ -21,10 +23,9 @@ function parseData(data, screenname) {
 	    {
 		var $ = window.$;
 		$('link[type*="application/rss"][rel*="alternate"]').each(function() {
-		    //console.log(" -", $(this).attr('href'));
+		    console.log(" -", $(this).attr('href'));
 		    var relurl = $(this).attr('href');
 		    var absurl = modurl.resolve(url, relurl);
-
 		    fs.appendFile('twitter_feeds.txt', url + " ||SEPERATOR|| " + absurl + "\n");
 		});
 	    }
@@ -32,8 +33,7 @@ function parseData(data, screenname) {
 	    {
 		console.log('caught exception while parsing:', exception);
 	    }
-
-	    window.close();
+	    finally {window.close();}
 	}
     });
 }
@@ -50,14 +50,21 @@ var qRdFile = async.queue(function(task, callback) {
     });
 }, 100);
 
-
+var processedFiles = fs.readFileSync('tmp/parsed_twitter_files.txt', {encoding: 'utf-8'}).split('\n');
 var dir = 'out/';
 fs.readdir(dir, function(errRdDir, files) {
     if(errRdDir) throw errRdDir;
     console.log('number of files:' + files.length);
     files.forEach(function(file) {
+	
+	if(processedFiles.indexOf(dir + file) > -1) {
+	    console.log('passing over ', dir + file);
+	    return;
+	}
 	qRdFile.push({filename: dir + file}, function(errFile) {
 	    if(errFile) throw errFile;
+	    
+	    fs.appendFile('tmp/parsed_twitter_files.txt', dir + file + '\n'); 
 	    //console.log("called back");
 	}); // push queue
     }); // files.forEach
