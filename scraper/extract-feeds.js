@@ -12,13 +12,6 @@ var feedextract = require("../lib/feedextract");
 var qExternalPage = async.queue(function(task, callback) {
     console.log("starting on:", task.url);
     
-    fs.writeFile('../tmp/tn/' + task.position + '.json', JSON.stringify(task), function(err) {
-	if(err) throw err;
-
-	callback(null);
-    });
-
-    /*
     feedextract.requestAndExtract({url: task.url}, function(errFE, result) {
 	
 	if(errFE) {
@@ -34,22 +27,7 @@ var qExternalPage = async.queue(function(task, callback) {
 	}
     });
     /* */
-}, 25);
-
-function parseData(task) {
-    var ofstPosition = (task.page - 1) * 25 + 1;   
-    parser.parse(task.body, function($) {
-	$('td.site-details a.offsite').each(function() {
-	    var nobj = {
-		position: ofstPosition++,
-		url: $(this).attr('href')
-	    };
-	    qExternalPage.push(nobj);
-	    process.stdout.write(".");
-	}); // each site link
-    }); // parser.parse
-}
-
+}, 100);
 
 var qRdFile = async.queue(function(task, callback) {
     fs.readFile(task.filename,'utf8', function(error, data) {
@@ -61,17 +39,21 @@ var qRdFile = async.queue(function(task, callback) {
 	}
 	// call async to enable concurrency between both queues
 	setImmediate(function(){
-        parseData(JSON.parse(data)); 
+        qExternalPage.push(JSON.parse(data), 
+	    function(errFile) {
+		if(errFile) throw errFile; 
+		fs.appendFile('../tmp/technorati_rank_parsed.txt', task.filename + '\n');
+		console.log('finished ', task.filename);
+	    }); 
 	callback(null, task);});
     });
     
     /* */
 }, 5);
 
-//qExternalPage.push({url: 'http://www.it-engelhardt.de', position: 1});
-var processedFiles = fs.readFileSync('../tmp/technorati_parsed.txt', {encoding: 'utf-8'}).split('\n');
-var dir = 'data/';
-for(var i = 1; i <= 4000; i++) {
+var processedFiles = fs.readFileSync('../tmp/technorati_rank_parsed.txt', {encoding: 'utf-8'}).split('\n');
+var dir = '../tmp/tn/';
+for(var i = 1; i <= 100000; i++) {
     var path = dir + i + '.json';
     if(!fs.existsSync(path)) continue;
     
@@ -79,9 +61,6 @@ for(var i = 1; i <= 4000; i++) {
 	console.log("skipping over ", path);
 	continue;
     }
-    qRdFile.push({filename: path}, function(errFile, task) {
-	if(errFile) throw errFile; 
-	fs.appendFile('../tmp/technorati_parsed.txt', task.filename + '\n');
-    });
+    qRdFile.push({filename: path}, function(error, task) {} );
 }
 /* */

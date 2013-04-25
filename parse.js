@@ -65,7 +65,7 @@ fs.readdir(dir, function(errRdDir, files) {
 	    if(errFile) throw errFile;
 	    
 	    fs.appendFile('tmp/parsed_twitter_files.txt', dir + file + '\n'); 
-	    //console.log("called back");
+	    console.log("finished ", dir, file);
 	}); // push queue
     }); // files.forEach
 }); // read directory
