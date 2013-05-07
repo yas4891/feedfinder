@@ -104,6 +104,23 @@ var qExternalPage = async.queue(function(task, callback) {
 		var $ = window.$;
 		
 		var arrFeeds = []; 
+		$('link[type="application/atom+xml"]').each(function() {
+		   var obj = $(this);
+		
+		    // it seems as if people forget to put the href attribute into their <link> tags...
+		    if(!obj.attr('href')) return; 
+		    try 
+		    {
+			var rsslink = modurl.resolve(task.url, obj.attr('href'));
+		    }
+		    catch(urlex) {
+			logerr("error resolving URL:", obj.attr('href'), " -- position:", task.position);
+			throw urlex;
+		    }
+		    arrFeeds.push(rsslink);
+		
+		    //console.log("found RSS link:", rsslink);	
+		}); // link each
 		$('link[type="application/rss+xml"]').each(function() {
 		   var obj = $(this);
 		
@@ -200,7 +217,7 @@ if(fs.existsSync(progress_file))
 
 
 var start = +process.argv[2];
-var end = start + 10000;
+var end = start + 22000;
 var cSkip = 0;
 for(var i = start; i <= end ; i++) {
     var path = read_in_dir + i + '.json';
