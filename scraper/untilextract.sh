@@ -1,6 +1,5 @@
 #!/bin/sh
 
-until node extract-feeds.js; do
-    echo "Extract Feeds from Technorati crashed with exit code$?. Respawning.." >&2
-    sleep 1
-done
+sh untilextract2.sh 0 &
+sh untilextract2.sh 10000 &
+sh untilextract2.sh 20000 &

@@ -19,6 +19,11 @@ function parseData(data, screenname) {
 	    if(error) {
 		console.log("error creating DOM:", error);
 	    }
+	    if(!window)
+	    {
+		console.log("no jsdom.window for ", screenname);
+		return;
+	    }
 	    try
 	    {
 		var $ = window.$;
@@ -28,6 +33,11 @@ function parseData(data, screenname) {
 		    var absurl = modurl.resolve(url, relurl);
 		    fs.appendFile('twitter_feeds.txt', url + " ||SEPERATOR|| " + absurl + "\n");
 		});
+
+		// put here because the callback was not called in time and this produced
+		// quite a few duplicates 
+		fs.appendFileSync('tmp/parsed_twitter_files.txt', screenname + '\n'); 
+		console.log("finished try", screenname);
 	    }
 	    catch(exception) 
 	    {
@@ -64,7 +74,6 @@ fs.readdir(dir, function(errRdDir, files) {
 	qRdFile.push({filename: dir + file}, function(errFile) {
 	    if(errFile) throw errFile;
 	    
-	    fs.appendFile('tmp/parsed_twitter_files.txt', dir + file + '\n'); 
 	    console.log("finished ", dir, file);
 	}); // push queue
     }); // files.forEach
