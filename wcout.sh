@@ -11,5 +11,5 @@ do
 
     echo "technorati extracted"
     less tmp/technorati_rank_extracted.txt | wc -l
-    sleep 20
+    sleep 60
 done

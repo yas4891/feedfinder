@@ -13,7 +13,7 @@ var progress_file = '../tmp/technorati_rank_extracted.txt';
 var result_dir = '../tmp/tn/extracted_feeds/';
 var read_in_dir = '../tmp/tn/downloaded_blogs/';
 var error_file = result_dir + 'errornous.txt';
-
+var log_file = "../tmp/extract-feeds.error.log"
 var testMode = false;
 /*
  * log to both the console and stderr
@@ -101,6 +101,13 @@ var qExternalPage = async.queue(function(task, callback) {
 	    html: task.body,
 	    src: [jQuery],
 	    done: function(errors, window) {
+		if(!window)
+		{
+		    fs.appendFileSync(log_file, "invalid window for position:" + task.position + "\n");
+		    callback(null);
+		    return;
+		}
+		
 		var $ = window.$;
 		
 		var arrFeeds = []; 
@@ -196,7 +203,7 @@ var qRdFile = async.queue(function(task, callback) {
 	}); // setImmediate
     }); // readFile
     /* */
-}, 5);
+}, 25);
 
 qRdFile.drain = function() {
     console.log("all read file events have been processed -->", qExternalPage.length());
@@ -217,7 +224,7 @@ if(fs.existsSync(progress_file))
 
 
 var start = +process.argv[2];
-var end = start + 22000;
+var end = start + 10000;
 var cSkip = 0;
 for(var i = start; i <= end ; i++) {
     var path = read_in_dir + i + '.json';
