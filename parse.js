@@ -3,21 +3,23 @@ var async = require('async');
 var modurl = require('url');
 var parser = require('./lib/parser');
 var jsdom = require('jsdom');
-
+var jQuery = fs.readFileSync('lib/jquery.js').toString();
 var counter = 0;
 
-function parseData(data, screenname) {
+function parseData(data, filename, screenname) {
     var line = data.split(/\r?\n/)[0];
     var url = line.split(" ")[1];
     
     console.log('parsing screenname:', screenname);    
+    try {
     jsdom.env({
 	html: data,
-	scripts: ["jquery.js"],
+	src: [jQuery],
 	done: function(error, window) {
 
 	    if(error) {
 		console.log("error creating DOM:", error);
+		return;
 	    }
 	    if(!window)
 	    {
@@ -27,16 +29,19 @@ function parseData(data, screenname) {
 	    try
 	    {
 		var $ = window.$;
+		var arrlinks = [];
 		$('link[type*="application/rss"][rel*="alternate"]').each(function() {
 		    console.log(" -", $(this).attr('href'));
 		    var relurl = $(this).attr('href');
 		    var absurl = modurl.resolve(url, relurl);
-		    fs.appendFile('twitter_feeds.txt', url + " ||SEPERATOR|| " + absurl + "\n");
+		    arrlinks.push(absurl);
 		});
 
+		fs.writeFileSync('tmp/twitter/twitter_feeds/' + screenname + '.json',
+		    JSON.stringify({screenname: screenname, links: arrlinks}));
 		// put here because the callback was not called in time and this produced
 		// quite a few duplicates 
-		fs.appendFileSync('tmp/parsed_twitter_files.txt', screenname + '\n'); 
+		fs.appendFileSync('tmp/parsed_twitter_files.txt', filename + '\n'); 
 		console.log("finished try", screenname);
 	    }
 	    catch(exception) 
@@ -46,6 +51,14 @@ function parseData(data, screenname) {
 	    finally {window.close();}
 	}
     });
+    }
+    catch(exception)
+    {
+	console.log("exception calling jsdom.env:",exception);
+	console.log("affected screenname:", screenname);
+	fs.appendFileSync('tmp/parsed_twitter_files.txt', filename + '\n'); 
+	fs.appendFileSync('tmp/failed_parsed_twitter_files.txt', filename + '\n'); 
+    }
 }
 
 var qRdFile = async.queue(function(task, callback) {
@@ -55,8 +68,9 @@ var qRdFile = async.queue(function(task, callback) {
 	    console.log(error);
 	    return;
 	}
-        parseData(data, task.filename); 
-        setImmediate(function() {callback(null);});
+        parseData(data, task.filename, task.screenname); 
+        //setImmediate(function() {callback(null);});
+	callback(null);
     });
 }, 100);
 
@@ -71,10 +85,11 @@ fs.readdir(dir, function(errRdDir, files) {
 	    console.log('passing over ', dir + file);
 	    return;
 	}
-	qRdFile.push({filename: dir + file}, function(errFile) {
+	
+	qRdFile.push({filename: dir + file, screenname: file.substr(0, file.indexOf('.'))}, function(errFile) {
 	    if(errFile) throw errFile;
 	    
-	    console.log("finished ", dir, file);
+	    //console.log("finished ", dir, file);
 	}); // push queue
     }); // files.forEach
 }); // read directory

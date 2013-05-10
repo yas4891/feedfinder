@@ -224,7 +224,7 @@ if(fs.existsSync(progress_file))
 
 
 var start = +process.argv[2];
-var end = start + 10000;
+var end = start + 5 * 10000;
 var cSkip = 0;
 for(var i = start; i <= end ; i++) {
     var path = read_in_dir + i + '.json';
